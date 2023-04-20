@@ -25,3 +25,15 @@ resource "azurerm_subnet_network_security_group_association" "nsg_association" {
   subnet_id                 = azurerm_subnet.subnet.id
   network_security_group_id = azurerm_network_security_group.nsg.id
 }
+
+resource "azurerm_network_interface" "vnic" {
+  name                = "${var.environment}-vnic"
+  location            = var.location
+  resource_group_name = var.resource_group
+
+  ip_configuration {
+    name                          = "dynamicIP"
+    subnet_id                     = azurerm_subnet.subnet.id
+    private_ip_address_allocation = "Dynamic"
+  }
+}

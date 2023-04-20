@@ -16,3 +16,7 @@ variable "environment" {
 variable "address_space" {
   type = string
 }
+
+variable "ssh_key_filepath" {
+  type = string
+}
