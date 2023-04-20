@@ -1,39 +1,40 @@
-resource "azurerm_network_security_group" "nsg" {
-  name                = "${var.environment}-nsg"
-  location            = var.location
-  resource_group_name = var.resource_group
+module "vnet" {
+  source         = "./vnet"
+  address_space  = var.address_space
+  environment    = var.environment
+  location       = var.location
+  resource_group = var.resource_group
 }
 
-resource "azurerm_virtual_network" "network_gateway" {
-  name                = "${var.environment}-gw"
-  location            = var.location
-  resource_group_name = var.resource_group
-  address_space       = var.address_space
-  tags = {
-    "environment" = "${var.environment}"
-  }
+module "snet" {
+  source                        = "./snet"
+  subnet_internal_address_range = var.subnet_internal_address_range
+  subnet_external_address_range = var.subnet_external_address_range
+  environment                   = var.environment
+  resource_group                = var.resource_group
+  vnet_name                     = var.vnet_name
 }
 
-resource "azurerm_subnet" "subnet" {
-  name                 = "${var.environment}-snet"
-  resource_group_name  = var.resource_group
-  virtual_network_name = azurerm_virtual_network.network_gateway.name
-  address_prefixes     = [var.subnet_address_range]
+module "nsg" {
+  source             = "./nsg"
+  internal_subnet_id = module.snet.internal_subnet_id
+  location           = var.location
+  environment        = var.environment
+  resource_group     = var.resource_group
 }
 
-resource "azurerm_subnet_network_security_group_association" "nsg_association" {
-  subnet_id                 = azurerm_subnet.subnet.id
-  network_security_group_id = azurerm_network_security_group.nsg.id
+module "pip" {
+  source         = "./pip"
+  location       = var.location
+  resource_group = var.resource_group
+  pip_name       = var.pip_name
 }
 
-resource "azurerm_network_interface" "vnic" {
-  name                = "${var.environment}-vnic"
-  location            = var.location
-  resource_group_name = var.resource_group
-
-  ip_configuration {
-    name                          = "dynamicIP"
-    subnet_id                     = azurerm_subnet.subnet.id
-    private_ip_address_allocation = "Dynamic"
-  }
+module "lb" {
+  source         = "./lb"
+  location       = var.location
+  resource_group = var.resource_group
+  lb_name        = var.lb_name
+  public_ip_id   = module.pip.public_ip_id
+  vnet_id        = module.vnet.vnet_id
 }
